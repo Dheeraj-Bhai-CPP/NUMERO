@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <title>लो शु ग्रिड - पूर्वानुमान</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,Arial,sans-serif;background:#f0f4f8;color:#2d3436;padding:30px;line-height:1.6;text-align:center}
+    h1{font-size:28px;color:#2d3436;margin-bottom:20px}
+    .container{max-width:700px;margin:0 auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.05)}
+    .input-group{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
+    input[type=date]{padding:12px 16px;font-size:16px;border:1px solid #ddd;border-radius:10px;min-width:180px}
+    button{padding:12px 28px;font-size:16px;background:#007bff;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:500}
+    button:hover{background:#0056b3}
+    .grid-wrapper{position:relative;display:inline-block;margin:30px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,100px);gap:12px}
+    .cell{width:100px;height:100px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;font-size:28px;font-weight:bold;color:#2d3436;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;text-overflow:clip;word-break:break-all}
+    .cell.multi{font-size:20px;line-height:1.1}
+    .m{border:3px solid #20c997;color:#20c997}
+    .b{border:3px solid #6f42c1;color:#6f42c1}
+    .line{background:#fffbe6;border:3px solid #ffc107}
+    .lbl{position:absolute;top:4px;right:4px;font-size:10px;font-weight:bold;z-index:1}
+    .result{background:#f1f3f5;padding:20px;border-radius:12px;text-align:center;font-size:16px;margin-top:20px}
+    .result h3{margin:15px 0 8px;color:#495057;font-size:18px}
+    .note{font-style:italic;color:#6c757d;font-size:14px;margin:8px 0}
+    svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+    .hand-line{stroke:#dc3545;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-dasharray:300;stroke-dashoffset:300;animation:drawLine 2.5s ease-out forwards;filter:url(#handfilter)}
+    @keyframes drawLine{to{stroke-dashoffset:0}}
+    @media(max-width:500px){
+      .grid{grid-template-columns:repeat(3,75px);gap:10px}
+      .cell{width:75px;height:75px;font-size:22px}
+      .cell.multi{font-size:16px}
+      .input-group{flex-direction:column;align-items:center}
+      input[type=date],button{width:100%;max-width:300px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>लो शु ग्रिड</h1>
+  <div class="input-group">
+    <input type="date" id="dob">
+    <button onclick="calc()">ग्रिड बनाएं</button>
+  </div>
+
+  <div class="grid-wrapper">
+    <div class="grid" id="grid">
+      <div class="cell" data-n="4"></div><div class="cell" data-n="9"></div><div class="cell" data-n="2"></div>
+      <div class="cell" data-n="3"></div><div class="cell" data-n="5"></div><div class="cell" data-n="7"></div>
+      <div class="cell" data-n="8"></div><div class="cell" data-n="1"></div><div class="cell" data-n="6"></div>
+    </div>
+    <svg id="lines"></svg>
+  </div>
+
+  <button id="predictBtn" onclick="openPredictionPage()" style="display:none;margin-top:20px;background:#28a745;font-size:18px;padding:14px 32px">
+    पूर्वानुमान देखें
+  </button>
+
+  <div id="result" class="result"></div>
+</div>
+
+<script>
+function single(n){
+  while(n>9)n=[...''+n].reduce((a,b)=>a+ +b,0);
+  return n;
+}
+
+function calc(){
+  const d=document.getElementById('dob').value;
+  if(!d) return alert('कृपया जन्म तिथि चुनें');
+
+  const [y,m,dd]=d.split('-');
+  const digits=[...d.replace(/-/g,'')].map(Number);
+  const cnt=Array(10).fill(0);
+  digits.forEach(x=>cnt[x]++);
+
+  const moolank = single(+dd);
+  const bhagyank = single(digits.reduce((a,b)=>a+b,0));
+
+  const dobHasMoolank = digits.includes(moolank);
+  if(!dobHasMoolank) cnt[moolank]=1;
+  cnt[bhagyank]++;
+
+  document.querySelectorAll('.cell').forEach(c=>{c.textContent='';c.className='cell';c.classList.remove('multi')});
+  document.getElementById('lines').innerHTML='';
+  const present=new Set();
+
+  for(let i=1;i<=9;i++){
+    const cell=document.querySelector(`[data-n="${i}"]`);
+    if(cnt[i]>0){
+      const numStr=i.toString().repeat(cnt[i]);
+      cell.textContent=numStr;
+      if(cnt[i]>1) cell.classList.add('multi');
+      present.add(i);
+      let inner=numStr;
+      if(i===moolank){cell.classList.add('m');inner+=`<span class="lbl">M</span>`;}
+      if(i===bhagyank){cell.classList.add('b');inner+=`<span class="lbl">B</span>`;}
+      cell.innerHTML=inner;
+    }
+  }
+
+  const svg=document.getElementById('lines');
+  const size = window.innerWidth<=500?75:100;
+  const gap  = window.innerWidth<=500?10:12;
+  const offset = size/2+2;
+  const pos = {
+    4:[offset,offset],9:[offset+(size+gap),offset],2:[offset+2*(size+gap),offset],
+    3:[offset,offset+(size+gap)],5:[offset+(size+gap),offset+(size+gap)],7:[offset+2*(size+gap),offset+(size+gap)],
+    8:[offset,offset+2*(size+gap)],1:[offset+(size+gap),offset+2*(size+gap)],6:[offset+2*(size+gap),offset+2*(size+gap)]
+  };
+  if(!document.getElementById('handfilter')){
+    svg.innerHTML=`<defs>
+      <filter id="handfilter" x="-50%" y="-50%" width="200%" height="200%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4"/>
+      </filter>
+    </defs>`;
+  }
+
+  const lines=[
+    {p:[4,9,2],n:"भावनात्मक शक्ति"},
+    {p:[3,5,7],n:"बौद्धिक रेखा"},
+    {p:[8,1,6],n:"शारीरिक शक्ति"},
+    {p:[4,3,8],n:"योजनाकार"},
+    {p:[9,5,1],n:"इच्छाशक्ति"},
+    {p:[2,7,6],n:"व्यवहारिक"},
+    {p:[4,5,6],n:"लक्ष्य केंद्रित"},
+    {p:[2,5,8],n:"संतुलन"}
+  ];
+  const completeLines=[];
+  lines.forEach(l=>{
+    if(l.p.every(n=>present.has(n))){
+      const [a,b,c]=l.p;
+      const [x1,y1]=pos[a],[x2,y2]=pos[b],[x3,y3]=pos[c];
+      const path=`M ${x1} ${y1} Q ${x1+(x2-x1)*0.5+rand(-10,10)} ${y1+(y2-y1)*0.5+rand(-10,10)} ${x2} ${y2} Q ${x2+(x3-x2)*0.5+rand(-10,10)} ${y2+(y3-y2)*0.5+rand(-10,10)} ${x3} ${y3}`;
+      svg.innerHTML+=`<path class="hand-line" d="${path}"/>`;
+      l.p.forEach(n=>document.querySelector(`[data-n="${n}"]`).classList.add('line'));
+      completeLines.push(l);
+    }
+  });
+
+  // सिर्फ मूलांक और भाग्यांक दिखाएं - कोई भविष्यवाणी नहीं
+  let html=`<h3>मूलांक: <strong>${moolank}</strong> | भाग्यांक: <strong>${bhagyank}</strong></h3>`;
+  if(dobHasMoolank) html+=`<div class="note">नोट: अंक ${moolank} मूलांक और तारीख दोनों से आया है।</div>`;
+
+  document.getElementById('result').innerHTML=html;
+  document.getElementById('predictBtn').style.display='inline-block';
+
+  // सारी डेटा prediction page के लिए सेव करें
+  window.predictionData={
+    moolank,
+    bhagyank,
+    present: [...present],
+    miss: Array.from({length:9},(_,i)=>i+1).filter(n=>!present.has(n)),
+    completeLines
+  };
+}
+
+function rand(min,max){return Math.random()*(max-min)+min;}
+
+// भविष्यवाणी टेक्स्ट (सिर्फ popup में यूज़ होंगे)
+function pred(n){
+  const p={1:"नेतृत्व",2:"सहयोग",3:"रचनात्मक",4:"अनुशासन",5:"साहस",6:"प्रेम",7:"आध्यात्म",8:"धन",9:"करुणा"};
+  return p[n]||'';
+}
+function predMiss(n){
+  const m={1:"निर्णय में कठिनाई",2:"संवेदनशीलता कम",3:"रचनात्मकता कम",4:"अस्थिरता",5:"परिवर्तन से डर",6:"रिश्तों में कमी",7:"गहराई की कमी",8:"धन प्रबंधन कमजोर",9:"करुणा की कमी"};
+  return m[n]||'';
+}
+
+const fullPred={1:"नेतृत्व क्षमता उच्च। सूर्य का प्रभाव। स्वभाव: आत्मविश्वासी, महत्वाकांक्षी। करियर: राजनेता, मैनेजर। स्वास्थ्य: हृदय सावधानी। रिश्ते: वफादार लेकिन जिद्दी। उपाय: लाल पहनें, रविवार दान।",2:"सहयोगी और संवेदनशील। चंद्र का प्रभाव। स्वभाव: शांतिप्रिय, भावुक। करियर: काउंसलर, शिक्षक। स्वास्थ्य: पेट संबंधी। रिश्ते: रोमांटिक लेकिन अनिर्णायक। उपाय: सफेद रंग, सोमवार उपवास।",3:"रचनात्मक और आशावादी। गुरु का प्रभाव। स्वभाव: उत्साही, सामाजिक। करियर: कलाकार, लेखक। स्वास्थ्य: लीवर। रिश्ते: आकर्षक लेकिन बिखरा। उपाय: पीला पहनें, गुरुवार दान।",4:"अनुशासित और मेहनती। राहु का प्रभाव। स्वभाव: व्यावहारिक, स्थिर। करियर: इंजीनियर, वकील। स्वास्थ्य: हड्डी/त्वचा। रिश्ते: वफादार लेकिन कठोर। उपाय: नीला रंग, शनिवार तेल दान।",5:"साहसी और स्वतंत्र। बुध का प्रभाव। स्वभाव: बुद्धिमान, परिवर्तनशील। करियर: व्यापारी, पत्रकार। स्वास्थ्य: तंत्रिका तंत्र। रिश्ते: रोमांचक लेकिन अस्थिर। उपाय: हरा पहनें, बुधवार पूजा।",6:"प्रेमपूर्ण और जिम्मेदार। शुक्र का प्रभाव। स्वभाव: कलात्मक, परिवारप्रिय। करियर: डॉक्टर, डिजाइनर। स्वास्थ्य: गला/गर्दन। रिश्ते: गहरा बंधन। उपाय: सफेद/गुलाबी, शुक्रवार दान।",7:"आध्यात्मिक और विश्लेषणात्मक। केतु का प्रभाव। स्वभाव: अंतर्मुखी, बुद्धिमान। करियर: वैज्ञानिक, योग शिक्षक। स्वास्थ्य: मानसिक तनाव। रिश्ते: गहरा लेकिन अलगाव। उपाय: बैंगनी रंग, शनिवार ध्यान।",8:"धनवान और महत्वाकांक्षी। शनि का प्रभाव। स्वभाव: अनुशासित, कड़ी मेहनत। करियर: व्यवसायी, वित्त। स्वास्थ्य: जोड़/कमर। रिश्ते: स्थिर लेकिन नियंत्रक। उपाय: काला/नीला, शनिवार तेल।",9:"करुणामय और आदर्शवादी। मंगल का प्रभाव। स्वभाव: उदार, ऊर्जावान। करियर: समाजसेवी, डॉक्टर। स्वास्थ्य: रक्त/सिर। रिश्ते: भावुक लेकिन अधीर। उपाय: लाल/नारंगी, मंगलवार हनुमान चालीसा।"};
+const fullMoolank={1:"मूलांक 1: आपका स्वभाव स्वतंत्र और नेतृत्वकारी है। जीवन की शुरुआत चुनौतियों से भरी, लेकिन सफलता निश्चित। फोकस: आत्मविश्वास बढ़ाएँ। चुनौती: अहंकार। ग्रह: सूर्य।",2:"मूलांक 2: संवेदनशील और सहयोगी। भावनाएँ मजबूत, लेकिन निर्णय लेने में देरी। फोकस: संतुलन। चुनौती: अधिक संवेदनशीलता। ग्रह: चंद्र।",3:"मूलांक 3: रचनात्मक और सामाजिक। जीवन रंगीन, लेकिन एकाग्रता की कमी। फोकस: लक्ष्य निर्धारण। चुनौती: बिखराव। ग्रह: गुरु।",4:"मूलांक 4: अनुशासित और स्थिर। मेहनत से सफलता, लेकिन परिवर्तन से डर। फोकस: लचीलापन। चुनौती: जिद्दीपन। ग्रह: राहु।",5:"मूलांक 5: साहसी और बुद्धिमान। यात्राएँ और बदलाव जीवन का हिस्सा। फोकस: स्थिरता। चुनौती: अधीरता। ग्रह: बुध।",6:"मूलांक 6: प्रेमपूर्ण और जिम्मेदार। परिवार केंद्र, लेकिन अधिक चिंता। फोकस: स्व-देखभाल। चुनौती: ईर्ष्या। ग्रह: शुक्र।",7:"मूलांक 7: आध्यात्मिक और गहन। एकांत पसंद, लेकिन अलगाव का खतरा। फोकस: संबंध बनाएँ। चुनौती: संदेह। ग्रह: केतु।",8:"मूलांक 8: महत्वाकांक्षी और शक्तिशाली। धन आकर्षित, लेकिन संघर्ष। फोकस: नैतिकता। चुनौती: लालच। ग्रह: शनि।",9:"मूलांक 9: करुणामय और ऊर्जावान। सेवा जीवन का उद्देश्य। फोकस: सीमाएँ। चुनौती: अधीरता। ग्रह: मंगल।"};
+const fullBhagyank={1:"भाग्यांक 1: भाग्य नेतृत्व देगा। उच्च पद, लेकिन मेहनत जरूरी। जीवन पथ: स्वतंत्रता। सलाह: जोखिम लें।",2:"भाग्यांक 2: भाग्य सहयोग से चमकेगा। शांति और संतुलन मिलेगा। जीवन पथ: साझेदारी। सलाह: धैर्य रखें।",3:"भाग्यांक 3: भाग्य रचनात्मकता से खुशियाँ लाएगा। प्रसिद्धि संभव। जीवन पथ: अभिव्यक्ति। सलाह: अनुशासन।",4:"भाग्यांक 4: भाग्य स्थिरता देगा। धीमी लेकिन मजबूत सफलता। जीवन पथ: निर्माण। सलाह: लचीलापन।",5:"भाग्यांक 5: भाग्य परिवर्तन लाएगा। साहस से लाभ। जीवन पथ: स्वतंत्रता। सलाह: फोकस।",6:"भाग्यांक 6: भाग्य परिवार और प्रेम देगा। सुखी वैवाहिक जीवन। जीवन पथ: सेवा। सलाह: संतुलन।",7:"भाग्यांक 7: भाग्य आध्यात्मिक विकास देगा। गहन ज्ञान। जीवन पथ: खोज। सलाह: संबंध।",8:"भाग्यांक 8: भाग्य धन और शक्ति देगा। कर्म फल। जीवन पथ: महत्वाकांक्षा। सलाह: नैतिकता।",9:"भाग्यांक 9: भाग्य मानवता सेवा से चमकेगा। वैश्विक प्रभाव। जीवन पथ: समापन। सलाह: दान।"};
+const fullMiss={1:"गायब 1: नेतृत्व की कमी। उपाय: सूर्य मंत्र जप।",2:"गायब 2: संवेदनशीलता कम। उपाय: चंद्र पूजा।",3:"गायब 3: रचनात्मकता कम। उपाय: गुरु दान।",4:"गायब 4: अस्थिरता। उपाय: राहु यंत्र।",5:"गायब 5: डर। उपाय: बुधवार व्रत।",6:"गायब 6: रिश्ते कमजोर। उपाय: शुक्र मंत्र।",7:"गायब 7: गहराई कम। उपाय: केतु पूजा।",8:"गायब 8: धन समस्या। उपाय: शनि तेल दान।",9:"गायब 9: करुणा कम। उपाय: मंगल चालीसा।"};
+
+function openPredictionPage(){
+  const data=window.predictionData;
+  if(!data) return alert("कृपया पहले ग्रिड बनाएँ");
+
+  const win=window.open('','_blank','width=820,height=900,scrollbars=yes,resizable=yes');
+  if(!win) return alert("पॉपअप ब्लॉकर बंद करें");
+
+  let html=`<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8"><title>लो शु भविष्यफल</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,Arial,sans-serif;background:#f8f9fc;color:#2d3436;line-height:1.8;padding:15px}
+.container{max-width:720px;margin:20px auto;background:#fff;padding:32px;border-radius:20px;box-shadow:0 15px 40px rgba(0,0,0,.08)}
+h1{text-align:center;font-size:29px;color:#d63384;margin-bottom:10px;font-weight:600}
+.highlight{text-align:center;margin:28px 0;padding:20px;background:#e8f5e9;border-radius:16px;font-size:19px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:15px}
+.num{display:inline-block;padding:8px 16px;background:#28a745;color:#fff;border-radius:8px;font-weight:bold;font-size:20px}
+.moolank{background:#28a745}.bhagyank{background:#6f42c1}
+.section{margin:38px 0}
+.section h2{font-size:24px;margin-bottom:18px;padding-bottom:12px;border-bottom:3px solid #e0e0e0;text-align:center;position:relative;color:#2c3e50}
+.section h2::after{content:'';position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);width:70px;height:3px;background:#007bff}
+.present h2{color:#20c997}.missing h2{color:#dc3545}.lines h2{color:#ffc107}
+.card{background:#fdfdfd;border-left:6px solid #20c997;padding:22px;margin:22px 0;border-radius:0 16px 16px 0;box-shadow:0 4px 12px rgba(0,0,0,.06);transition:.3s}
+.card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.card.miss{background:#fff5f5;border-left-color:#dc3545}
+.card.line{background:#fffbe6;border-left-color:#ffc107}
+.card h3{font-size:21px;margin-bottom:12px;display:flex;align-items:center;gap:14px;font-weight:600}
+.card .num{
+  background:#ffc107;color:#333;padding:6px 12px;border-radius:6px;font-size:17px;font-weight:bold;min-width:70px;text-align:center;
+}
+.card.miss .num{background:#dc3545;color:#fff}
+.divider{margin:35px 0;border:none;border-top:2px dashed #ddd}
+.footer{text-align:center;margin-top:55px;padding:25px;border-top:2px solid #eee;color:#6c757d;font-size:15px}
+@media(max-width:600px){
+  .container{padding:22px}
+  .highlight{flex-direction:column;gap:12px}
+  .num{font-size:18px;padding:6px 12px}
+  .card h3{font-size:19px;gap:10px}
+  .card .num{font-size:16px;padding:5px 10px;min-width:60px}
+  h1{font-size:26px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>लो शु भविष्यफल</h1>
+  <div class="highlight">
+    <div><strong>मूलांक:</strong> <span class="num moolank">${data.moolank}</span></div>
+    <div><strong>भाग्यांक:</strong> <span class="num bhagyank">${data.bhagyank}</span></div>
+  </div>`;
+
+  if(data.completeLines.length){
+    html+=`<div class="section lines"><h2>पूर्ण रेखाएँ (आपकी शक्ति)</h2>`;
+    data.completeLines.forEach(l=>{
+      const lineNumbers = l.p.join('-');
+      html+=`<div class="card line">
+        <h3><span class="num">${lineNumbers}</span> ${l.n}</h3>
+        <p>यह रेखा पूरी होने से आपको <strong>${l.n}</strong> में विशेष शक्ति मिलेगी। Lo Shu में यह ${l.n} और सफलता का प्रतीक।</p>
+      </div>`;
+    });
+    html+=`<hr class="divider"></div>`;
+  }
+
+  html+=`<div class="section present"><h2>मौजूद अंक (आपकी ताकत)</h2>`;
+  data.present.forEach(n=>{
+    html+=`<div class="card">
+      <h3><span class="num">${n}</span> ${pred(n)}</h3>
+      <p>${fullPred[n]}</p>
+    </div>`;
+  });
+  html+=`<hr class="divider"></div>`;
+
+  if(data.miss.length){
+    html+=`<div class="section missing"><h2>गायब अंक (सुधारने योग्य)</h2>`;
+    data.miss.forEach(n=>{
+      html+=`<div class="card miss">
+        <h3><span class="num">${n}</span> ${predMiss(n)}</h3>
+        <p>${fullMiss[n]}</p>
+      </div>`;
+    });
+    html+=`<hr class="divider"></div>`;
+  }
+
+  html+=`<div class="section">
+    <h2>मूलांक का विस्तृत प्रभाव (आपका मुख्य स्वभाव)</h2>
+    <div class="card" style="background:#e3f2fd;border-left-color:#2196f3">
+      <h3>मूलांक ${data.moolank}</h3>
+      <p>${fullMoolank[data.moolank]}</p>
+    </div><hr class="divider">
+    <h2>भाग्यांक का विस्तृत प्रभाव (आपका जीवन पथ)</h2>
+    <div class="card" style="background:#f3e5f5;border-left-color:#9c27b0">
+      <h3>भाग्यांक ${data.bhagyank}</h3>
+      <p>${fullBhagyank[data.bhagyank]}</p>
+    </div>
+  </div>`;
+
+  html+=`<div class="footer">
+    <p>यह भविष्यफल लो शु ग्रिड के प्राचीन सिद्धांतों पर आधारित है।</p>
+    <p><strong>सकारात्मक रहें • मेहनत करें • सफलता आपकी होगी!</strong></p>
+  </div></div></body></html>`;
+
+  win.document.open(); win.document.write(html); win.document.close();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('dob').max = '2100-12-31';
+});
+</script>
+</body>
+</html>
