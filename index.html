@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Password Check</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f2f5;
+        display: flex;
+        height: 100vh;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+    }
+    .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        width: 300px;
+        text-align: center;
+    }
+    h2 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    input[type="password"] {
+        width: 100%;
+        padding: 0.6rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    input[type="password"]:focus {
+        border-color: #4a90e2;
+        outline: none;
+    }
+    button {
+        background: #4a90e2;
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    button:hover:not(:disabled) {
+        background: #357abd;
+    }
+    button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    .error {
+        color: #d9534f;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .hidden {
+        display: none;
+    }
+    .buttons {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1rem;
+    }
+    .btn {
+        background: #4a90e2;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
+    .btn:hover {
+        background: #357abd;
+    }
+</style>
+</head>
+<body>
+
+<div class="container" id="login-screen">
+    <h2>Enter Password</h2>
+    <input type="password" id="password" placeholder="Enter Password">
+    <button id="login-btn">Submit</button>
+    <div id="error-msg" class="error hidden"></div>
+</div>
+
+<div class="container hidden" id="button-screen">
+    <h2>Select Option</h2>
+    <div class="buttons">
+        <a class="btn" href="1.html">Low</a>
+        <a class="btn" href="2.html">Med</a>
+        <a class="btn" href="3.html">High</a>
+    </div>
+</div>
+
+
+<script>
+    const loginBtn = document.getElementById('login-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const passwordInput = document.getElementById('password');
+    const loginScreen = document.getElementById('login-screen');
+    const buttonScreen = document.getElementById('button-screen');
+
+    loginBtn.addEventListener('click', () => {
+        const inputVal = passwordInput.value.trim();
+
+        if (inputVal === "5") {  // Simple password check
+            loginScreen.classList.add('hidden');
+            buttonScreen.classList.remove('hidden');
+        } else {
+            wrongPassword();
+        }
+    });
+
+    function wrongPassword() {
+        let countdown = 10;
+        errorMsg.textContent = `Wrong password. Try again in ${countdown}s`;
+        errorMsg.classList.remove('hidden');
+        loginBtn.disabled = true;
+
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                errorMsg.textContent = `Wrong password. Try again in ${countdown}s`;
+            } else {
+                clearInterval(timer);
+                errorMsg.classList.add('hidden');
+                loginBtn.disabled = false;
+            }
+        }, 1000);
+    }
+</script>
+
+
+
+
+</body>
+</html>
